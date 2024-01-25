@@ -11,9 +11,7 @@ namespace NoteApp
     {
         void AddUser(User user);
         void RemoveUser(string PhoneNumber);
-        List<User> GetUserList();
         List<User> GetUserListByFilter(string filter);
-    
     }
 
     public class UserAction : IUserAction
@@ -27,7 +25,9 @@ namespace NoteApp
 
         public void AddUser(User user)
         {
-            if (IsPhoneNumberUnique(user.PhoneNumber))
+            List<User> userList = LoadUsersFromFile();
+
+            if (IsPhoneNumberUnique(userList, user.PhoneNumber))
             {
                 users.Add(user);
                 Console.WriteLine("User added successfully.");
@@ -37,15 +37,18 @@ namespace NoteApp
                 Console.WriteLine("A user with the same phone number already exists.");
             }
 
-            SaveUsersToFile();
+            SaveUsersToFile(userList);
         }
 
         public void RemoveUser(string phoneNumber)
         {
-            User userToDelete = users.Find(u => u.PhoneNumber == phoneNumber);
+            List<User> userList = LoadUsersFromFile();
+            User userToDelete = userList.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
+
+
             if (userToDelete != null)
             {
-                users.Remove(userToDelete);
+                userList.Remove(userToDelete);
                 Console.WriteLine("User deleted successfully.");
             }
             else
@@ -53,18 +56,12 @@ namespace NoteApp
                 Console.WriteLine("There is no matching user number.");
             }
 
-            SaveUsersToFile();
-        }
-
-        public List<User> GetUserList()
-        {
-            LoadUsersFromFile();
-            return users;
+            SaveUsersToFile(userList);
         }
 
         public List<User> GetUserListByFilter(string filter)
         {
-            LoadUsersFromFile();
+          
 
             if (string.IsNullOrEmpty(filter) || filter.Length < 3)
             {
@@ -73,23 +70,18 @@ namespace NoteApp
             }
             else
             {
-                List<User> filteredUsers = users.FindAll(u => u.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                                                    u.Surname.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                                                    u.Email.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                                                    u.PhoneNumber.Contains(filter, StringComparison.OrdinalIgnoreCase));
-
-                if (filteredUsers.Any())
-                {
-                    foreach (var person in filteredUsers)
-                    {
-                        Console.WriteLine($"Name: {person.Name}, Email: {person.Email}, Phone: {person.PhoneNumber}");
-                    }
-                }
+                return LoadUsersFromFile()
+                .Where(u =>
+                            u.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                            u.Surname.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                            u.Email.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                            u.PhoneNumber.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
             }
             return users;
         }
 
-        public void SaveUsersToFile()
+        public void SaveUsersToFile(List<User> userList)
         {
             string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "users.txt");
 
@@ -97,7 +89,7 @@ namespace NoteApp
             {
                 StringBuilder sb = new StringBuilder();
 
-                foreach (var user in users)
+                foreach (var user in userList) //userlist was null exception thrown
                 {
                     string userLine = $"{user.Name},{user.Surname},{user.Email},{user.Password},{user.PhoneNumber},{user.IsAdmin}\n";
                     sb.Append(userLine);
@@ -133,16 +125,20 @@ namespace NoteApp
                     foreach (string line in lines)
                     {
                         string[] values = line.Split(',');
-                        User user = new User
+
+                        if (values.Length >= 6)
                         {
-                            Name = values[0],
-                            Surname = values[1],
-                            Email = values[2],
-                            Password = values[3],
-                            PhoneNumber = values[4],
-                            IsAdmin = bool.Parse(values[5])
-                        };
-                        loadedUsers.Add(user);
+                            User user = new User
+                            {
+                                Name = values[0],
+                                Surname = values[1],
+                                Email = values[2],
+                                Password = values[3],
+                                PhoneNumber = values[4],
+                                IsAdmin = bool.Parse(values[5])
+                            };
+                            loadedUsers.Add(user);
+                        }
                     }
                     return loadedUsers;
                 }
@@ -167,7 +163,7 @@ namespace NoteApp
             }
         }
 
-        public bool IsPhoneNumberUnique(string phoneNumber)
+        public bool IsPhoneNumberUnique(List<User> userList, string phoneNumber)
         {
             return users != null ? !users.Any(u => u.PhoneNumber == phoneNumber) : true;
 

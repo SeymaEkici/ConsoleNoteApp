@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NoteApp
 {
-    enum UserType
+    public enum UserType
     {
         Admin,
         Normal,

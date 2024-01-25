@@ -4,9 +4,10 @@ using NoteApp;
 internal class Program
 {
     public static List<User> users = new List<User>();
-    //public static UserAction userAction;
+    public static UserAction userAction;
     public static NoteAction noteAction;
     public static User user;
+    private static List<User> userList;
 
     static void Main(string[] args)
     {
@@ -15,11 +16,15 @@ internal class Program
         {
             users = new List<User>();
             users = userAction.LoadUsersFromFile();
-            noteAction = new NoteAction(users, userAction);
+            noteAction = new NoteAction(users, userAction, userList);
 
-            //users.Add(AddAdmin());
+            User identifiedUser = IdentifyUser();
 
-            ShowMenu();
+            if (identifiedUser != null)
+            {
+                user = identifiedUser;
+                ShowMenu();
+            }
         }
         catch (Exception ex)
         {
@@ -29,9 +34,7 @@ internal class Program
 
     static void ShowMenu()
     {
-        UserType userType = IdentifyUser();
-
-        switch (userType)
+        switch (user.UserType)
         {
             case UserType.Admin:
                 AdminMenu(user);
@@ -52,7 +55,7 @@ internal class Program
         }
     }
 
-    public static UserType IdentifyUser()
+    public static User IdentifyUser()
     {
         Console.Write("Enter your email address: ");
         String email = Console.ReadLine();
@@ -62,11 +65,22 @@ internal class Program
 
         User identifiedUser = users.Find(u => u.Email == email && u.Password == password);
 
-        return identifiedUser != null ? (identifiedUser.IsAdmin ? UserType.Admin : UserType.Normal) : UserType.Invalid;
+        if (identifiedUser != null)
+        {
+            identifiedUser.UserType = identifiedUser.IsAdmin ? UserType.Admin : UserType.Normal;
+        }
+
+        return identifiedUser;
     }
 
     static void NormalUserMenu(User user)
     {
+        if (user == null)
+        {
+            Console.WriteLine("Error: User is null.");
+            return;
+        }
+
         Console.WriteLine("What do you want?" +
                           "\n1- Add notes" +
                           "\n2- List my notes" +
@@ -78,7 +92,7 @@ internal class Program
             case 1:
                 Console.Write("Enter your note: ");
                 string note = Console.ReadLine();
-                noteAction.AddNote(user, note);
+                noteAction.AddNote(user, note, userList);
                 NormalUserMenu(user);
                 break;
 
@@ -99,7 +113,7 @@ internal class Program
 
     static void AdminMenu(User user)
     {
-        UserAction userAction = new UserAction();
+        UserAction userAction = new UserAction(); 
 
         Console.WriteLine("Welcome Admin! What do you want to do?" +
                           "\n1- Add user" +
@@ -122,7 +136,7 @@ internal class Program
 
                 List<User> filteredUsers = userAction.GetUserListByFilter(searchFilter);
 
-                if (filteredUsers.Any())
+                if (filteredUsers.Count >= 1)
                 {
                     Console.WriteLine("Matching users found:");
                     foreach (var person in filteredUsers)
@@ -137,7 +151,7 @@ internal class Program
                 break;
 
             case 3:
-                List<User> userList = userAction.GetUserList();
+                List<User> userList = userAction.LoadUsersFromFile();
                 Console.WriteLine("List of users:");
                 foreach (var u in userList)
                 {
@@ -146,9 +160,9 @@ internal class Program
                 break;
 
             case 4:
-                Console.Write("Enter the email of the user to delete: ");
-                string deleteEmail = Console.ReadLine();
-                userAction.RemoveUser(deleteEmail);
+                Console.Write("Enter the phone number of the user to delete: ");
+                string deletePhoneNumber = Console.ReadLine();
+                userAction.RemoveUser(deletePhoneNumber);
                 break;
 
             case 5:
@@ -193,31 +207,4 @@ internal class Program
             IsAdmin = isAdmin
         };
     }
-
-    /*
-    static User AddAdmin()
-    {
-        UserAction userAction = new UserAction();
-
-        if (userAction == null)
-        {
-            Console.WriteLine("UserAction is not initialized.");
-            return null;
-        }
-
-        User adminUser = new User
-        {
-            Name = "Şeyma",
-            Surname = "Ekici",
-            Email = "seyma@gmail.com",
-            PhoneNumber = "1234567890",
-            Password = "seyma",
-            IsAdmin = true
-        };
-
-        userAction.AddUser(adminUser);
-
-        return adminUser;
-    }
-    */
 }
