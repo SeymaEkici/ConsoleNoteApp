@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Globalization;
 
 namespace NoteApp
 {
     public interface INoteAction
     {
         void AddNote(User user, string note, List<User> userList);
-        List<string> GetNoteList(User user);
+        List<Notes> LoadNotesFromFile();
     }
 
     public class NoteAction : INoteAction
@@ -34,59 +35,89 @@ namespace NoteApp
                 return;
             }
 
-            if (user.Notes == null)
-            {
-                user.Notes = new List<string>();
-                user.Notes.Add(note);
-            }
+            string noteWithGuidAndDateTime = $"{user.Guid}#{note}#{DateTime.UtcNow:o}";
 
-            SaveNotesToFile(user, userList);
+            SaveNoteToFile(user, noteWithGuidAndDateTime);
 
-            user.Notes.Add($"{note}.{DateTime.UtcNow:o}");
+            Console.WriteLine("Note added successfully.");
         }
 
-        public List<string> GetNoteList(User user)
-        {
-            if (user == null)
-            {
-                Console.WriteLine("Error: User is null.");
-                return new List<string>();
-            }
-
-            if (user.Notes == null)
-            {
-                Console.WriteLine("No notes found.");
-                return new List<string>();
-            }
-
-            Console.WriteLine("Your Notes:");
-            foreach (var note in user.Notes)
-            {
-                Console.WriteLine(note);
-            }
-
-            return user.Notes.ToList();
-        }
-
-        public void SaveNotesToFile(User user, List<User> userList)
+        public void SaveNoteToFile(User user, string note)
         {
             string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "notes.txt");
 
             try
             {
-                StringBuilder sb = new StringBuilder();
-
-                foreach (var note in user.Notes)
-                {
-                    sb.AppendLine(note);
-                }
-                File.AppendAllText(filePath, sb.ToString());
+                string noteWithDelimiter = $"{note}###";
+                File.AppendAllText(filePath, noteWithDelimiter);
 
                 Console.WriteLine("Notes have been successfully saved to the file.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"An error occurred while saving notes to the file: {ex.Message}");
+            }
+        }
+
+        public List<Notes> LoadNotesFromFile()
+        {
+            UserAction userAction = new UserAction();
+            string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "notes.txt");
+
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    string lineText = File.ReadAllText(filePath);
+                    string[] noteLines = lineText.Split("###");
+
+                    if (noteLines.Length == 0)
+                    {
+                        Console.WriteLine("No note data found in the file.");
+                        return new List<Notes>();
+                    }
+
+                    List<Notes> loadedNotes = new List<Notes>();
+
+                    foreach (string line in noteLines)
+                    {
+
+                        string[] values = line.Split('#');
+
+                        if (values.Length >= 3)
+                        {
+                            Notes note = new Notes
+                            {
+                                User = userAction.GetUserByGuid(values[0]),
+                                Note = values[1],
+                                DateTime = DateTime.ParseExact(values[2], "yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture)
+                            };
+
+                            Console.WriteLine($"Note: {note.Note}, DateTime: {note.DateTime:yyyy-MM-ddTHH:mm:ss.fffffffZ}");
+                            
+                            loadedNotes.Add(note);
+                        }
+                    }
+                    return loadedNotes;
+                }
+
+                Console.WriteLine($"Error: The file {filePath} not found.");
+                return new List<Notes>();
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"Error: The file {filePath} not found.");
+                return new List<Notes>();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Error: Unauthorized access to the file {filePath}.");
+                return new List<Notes>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                return new List<Notes>();
             }
         }
     }

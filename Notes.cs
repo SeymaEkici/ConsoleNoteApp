@@ -12,7 +12,7 @@ namespace NoteApp
         public User User { get; set; }
         public DateTime DateTime { get; set; }
 
-        public string NoteWithDateTime => $"{Note}.{DateTime:o}";
+        public string NoteWithDateTime => $"{Note}#{DateTime:o}";
 
         public Notes(string note, User user)
         {
@@ -20,5 +20,7 @@ namespace NoteApp
             User = user;
             DateTime = DateTime.UtcNow;
         }
+        
+        public Notes() { }
     }
 }

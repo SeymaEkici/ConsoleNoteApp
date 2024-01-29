@@ -16,5 +16,6 @@ namespace NoteApp
         public bool IsAdmin { get; set; }
         public List<string> Notes { get; set; }
         public UserType UserType { get; set; }
+        public string Guid  { get; set; }
     }
 }

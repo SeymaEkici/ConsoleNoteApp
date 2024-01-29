@@ -97,7 +97,7 @@ internal class Program
                 break;
 
             case 2:
-                List<string> userNotes = noteAction.GetNoteList(user);
+                noteAction.LoadNotesFromFile();
                 NormalUserMenu(user);
                 break;
 
