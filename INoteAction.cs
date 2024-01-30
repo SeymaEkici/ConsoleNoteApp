@@ -11,7 +11,10 @@ namespace NoteApp
     public interface INoteAction
     {
         void AddNote(User user, string note, List<User> userList);
-        List<Notes> LoadNotesFromFile();
+        void SaveNoteToFile(User user, string note);
+        List<Notes> LoadNotesFromFile(User targetUser);
+        Notes CreateNoteFromValues(string[] values);
+
     }
 
     public class NoteAction : INoteAction
@@ -59,7 +62,7 @@ namespace NoteApp
             }
         }
 
-        public List<Notes> LoadNotesFromFile()
+        public List<Notes> LoadNotesFromFile(User targetUser)
         {
             UserAction userAction = new UserAction();
             string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "notes.txt");
@@ -81,21 +84,21 @@ namespace NoteApp
 
                     foreach (string line in noteLines)
                     {
-
+                        if (!string.IsNullOrEmpty(line))
+                        {        
                         string[] values = line.Split('#');
 
                         if (values.Length >= 3)
                         {
-                            Notes note = new Notes
-                            {
-                                User = userAction.GetUserByGuid(values[0]),
-                                Note = values[1],
-                                DateTime = DateTime.ParseExact(values[2], "yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture)
-                            };
+                            Notes note = CreateNoteFromValues(values);
 
-                            Console.WriteLine($"Note: {note.Note}, DateTime: {note.DateTime:yyyy-MM-ddTHH:mm:ss.fffffffZ}");
-                            
-                            loadedNotes.Add(note);
+                            if (note != null && note.User != null && note.User.Guid == targetUser.Guid)
+                            {
+                                Console.WriteLine($"Note: {note.Note}, DateTime: {note.DateTime:yyyy-MM-ddTHH:mm:ss.fffffffZ}");
+                                loadedNotes.Add(note);
+                            }
+                        }
+
                         }
                     }
                     return loadedNotes;
@@ -119,6 +122,38 @@ namespace NoteApp
                 Console.WriteLine($"Error: {ex.Message}");
                 return new List<Notes>();
             }
+        }
+
+        public Notes CreateNoteFromValues(string[] values)
+        {
+            UserAction userAction = new UserAction();
+
+            string userGuid = values[0];
+            string noteText = values[1];
+            string dateTimeString = values[2];
+
+            User user = userAction.GetUserByGuid(userGuid);
+
+            if (user == null)
+            {
+               Console.WriteLine($"Error: User with GUID {userGuid} not found.");
+                return null;
+            }
+
+            DateTime dateTime;
+
+            if (!DateTime.TryParseExact(dateTimeString, "yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out dateTime))
+            {
+                Console.WriteLine($"Error: Invalid DateTime format - {dateTimeString}");
+                return null;
+            }
+
+            return new Notes
+            {
+                User = user,
+                Note = noteText,
+                DateTime = dateTime
+            };
         }
     }
 }

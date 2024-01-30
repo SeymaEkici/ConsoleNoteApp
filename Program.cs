@@ -18,13 +18,7 @@ internal class Program
             users = userAction.LoadUsersFromFile();
             noteAction = new NoteAction(users, userAction, userList);
 
-            User identifiedUser = IdentifyUser();
-
-            if (identifiedUser != null)
-            {
-                user = identifiedUser;
-                ShowMenu();
-            }
+            ShowMenu();
         }
         catch (Exception ex)
         {
@@ -34,6 +28,21 @@ internal class Program
 
     static void ShowMenu()
     {
+        User identifiedUser = IdentifyUser();
+
+        try
+        {
+            if (identifiedUser != null)
+            {
+                user = identifiedUser;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
+
+
         switch (user.UserType)
         {
             case UserType.Admin:
@@ -97,11 +106,12 @@ internal class Program
                 break;
 
             case 2:
-                noteAction.LoadNotesFromFile();
+                List<Notes> userNotes = noteAction.LoadNotesFromFile(user);
                 NormalUserMenu(user);
                 break;
 
             case 3:
+                ShowMenu();
                 break;
 
             default:
@@ -128,6 +138,7 @@ internal class Program
             case 1:
                 User newUser = GetUserInformationFromConsole();
                 userAction.AddUser(newUser);
+                AdminMenu(user);
                 break;
 
             case 2:
@@ -148,6 +159,7 @@ internal class Program
                 {
                     Console.WriteLine("No matching users found!");
                 }
+                AdminMenu(user);
                 break;
 
             case 3:
@@ -157,15 +169,18 @@ internal class Program
                 {
                     Console.WriteLine($"Name: {u.Name}, Email: {u.Email}, Phone: {u.PhoneNumber}");
                 }
+                AdminMenu(user);
                 break;
 
             case 4:
                 Console.Write("Enter the phone number of the user to delete: ");
                 string deletePhoneNumber = Console.ReadLine();
                 userAction.RemoveUser(deletePhoneNumber);
+                AdminMenu(user);
                 break;
 
             case 5:
+                ShowMenu();
                 break;
 
             default:
@@ -191,6 +206,11 @@ internal class Program
         Console.Write("Phone Number: ");
         string phoneNumber = Console.ReadLine();
 
+        if (CheckPhoneNumber(phoneNumber) == false)
+        {
+            return GetUserInformationFromConsole();
+        }
+
         Console.Write("Password: ");
         string password = Console.ReadLine();
 
@@ -206,5 +226,20 @@ internal class Program
             Password = password,
             IsAdmin = isAdmin
         };
+    }
+
+    public static bool CheckPhoneNumber(string phoneNumber)
+    {
+        if (phoneNumber.Length == 10 && !phoneNumber.StartsWith("0"))
+        {
+
+            Console.WriteLine("Phone number is valid.");
+            return true;
+        }
+        else
+        {
+            Console.WriteLine("Invalid phone number. Please make sure it is 10 digits long and does not start with 0.");
+            return false;
+        }
     }
 }
